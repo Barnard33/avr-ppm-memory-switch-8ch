@@ -74,10 +74,10 @@ volatile boolean_t ppm_signal_received = FALSE;
 volatile uint8_t ppm_pulse_length = 0;
 
 inline static void init_interrupts(void) {
-	/* activate INT0 on PB2 */
-	GIMSK |= (1 << INT0);
-	/* generate interrupt on rising edge for INT0 */
-	MCUCR |= ((1 << ISC01) | (1 << ISC00));
+    /* activate INT0 on PB2 */
+    GIMSK |= (1 << INT0);
+    /* generate interrupt on rising edge for INT0 */
+    MCUCR |= ((1 << ISC01) | (1 << ISC00));
 }
 
 inline static int8_t is_int0_on_rising_edge(void) {
@@ -103,16 +103,16 @@ inline static void init_timer0_ppm_in(void) {
 }
 
 inline static void init_timer0_pwm(void) {
-	/* clear OC0B on compare match when up-counting
-	   set OC0B on compare match when down-counting */
-	TCCR0A |= (1 << COM0B1);
-	
-	/* phase correct PWM, 8-bit */
-	TCCR0A |= (1 << WGM00);
+    /* clear OC0B on compare match when up-counting
+       set OC0B on compare match when down-counting */
+    TCCR0A |= (1 << COM0B1);
+    
+    /* phase correct PWM, 8-bit */
+    TCCR0A |= (1 << WGM00);
     TCCR0B |= (1 << WGM02);
-	
-	/* set clock to clkIO (no prescaler) */
-	TCCR0B |= (1 << CS00);
+    
+    /* set clock to clkIO (no prescaler) */
+    TCCR0B |= (1 << CS00);
 }
 
 inline static void set_timer0_pwm_duty_cycle(uint8_t value) {
@@ -124,17 +124,17 @@ inline static void set_timer0_pwm_pulse_rate(uint8_t value) {
 }
 
 inline static void init_timer1_pwm(void) {
-	/* clear OC1A on compare match when up-counting
-	   set OC1A on compare match when down-counting */
-	TCCR1A |= (1 << COM1A1);
-	
+    /* clear OC1A on compare match when up-counting
+       set OC1A on compare match when down-counting */
+    TCCR1A |= (1 << COM1A1);
+    
     /* phase and frequency correct PWM
        TOP is ICR1 */
     //TCCR1A |= (1 << WGM10);
     TCCR1B |= (1 << WGM13);
 
-	/* set clock to clkIO (no prescaler) */
-	TCCR1B |= (1 << CS10);
+    /* set clock to clkIO (no prescaler) */
+    TCCR1B |= (1 << CS10);
 }
 
 inline static void set_timer1_pwm_duty_cycle(uint16_t value) {
@@ -252,13 +252,13 @@ int main(void) {
 
 /* servo input pin on INT0 */
 ISR(INT0_vect) {
-	if(is_int0_on_rising_edge()) {
-		TCNT0 = 0;
-		set_int0_on_falling_edge();
-	}
-	else {
+    if(is_int0_on_rising_edge()) {
+        TCNT0 = 0;
+        set_int0_on_falling_edge();
+    }
+    else {
         ppm_pulse_length = TCNT0;
-		ppm_signal_received = TRUE;
+        ppm_signal_received = TRUE;
         set_int0_on_rising_edge();
-	}
+    }
 }
