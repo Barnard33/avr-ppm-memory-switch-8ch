@@ -1,0 +1,19 @@
+{
+    "configurations": [
+        {
+            "name": "AVR",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/usr/lib/avr/include/**"
+            ],
+            "compilerPath": "/usr/bin/avr-gcc",
+            "cStandard": "gnu99",
+            "cppStandard": "gnu++14",
+            "intelliSenseMode": "linux-gcc-arm",
+            "defines": [
+                "__AVR_ATtiny24__=1"
+            ]
+        }
+    ],
+    "version": 4
+}
