@@ -69,6 +69,11 @@ const gpio_t switchable_gpios[SWITCHABLE_GPIOS_SIZE] = {
     {&PORTB, PB1},
 };
 
+#define BLINK_COUNTER_COMPARE 25 // defines the blinking frequncy as the number of PPM pulses
+const uint8_t blinking_gpios = (1 << 0); // defines GPIO_0 as a blinking GPIO
+uint8_t blinking_gpio_state = 0;
+uint8_t blink_counter = 0;
+
 /* global variables */
 volatile boolean_t ppm_signal_received = FALSE;
 volatile uint8_t ppm_pulse_length = 0;
@@ -169,6 +174,32 @@ inline static void toggle_gpio_state(gpio_t gpio) {
     (*gpio.port) ^= (1 << gpio.pin); 
 }
 
+inline static boolean_t is_blinking_switch(uint8_t gpio_number) {
+    return blinking_gpios & (1 << gpio_number);
+}
+
+inline static gpio_state_t get_blinking_gpio_state(uint8_t gpio_number) {
+    if(blinking_gpio_state & (1 << gpio_number)) {
+        return ON;
+    }
+    return OFF;
+}
+
+inline static gpio_t get_gpio_for_switch(uint8_t gpio_number) {
+    if(is_blinking_switch(gpio_number)) {
+        return (gpio_t) {&blinking_gpio_state, gpio_number};
+    }
+    return switchable_gpios[gpio_number];
+}
+
+inline static void set_switch_state(uint8_t gpio_number, gpio_state_t state) {
+    set_gpio_state(get_gpio_for_switch(gpio_number), state);
+}
+
+inline static void toggle_switch_state(uint8_t gpio_number) {
+    toggle_gpio_state(get_gpio_for_switch(gpio_number));
+}
+
 inline static direction_t get_direction(uint8_t pulse_length) {
     if(pulse_length > 27) {
         return FORWARD;
@@ -181,6 +212,68 @@ inline static direction_t get_direction(uint8_t pulse_length) {
     }
     else {
         return UNDEFINED;
+    }
+}
+
+inline static void blink_blinking_gpios(void) {
+    blink_counter++;
+    if(blink_counter > BLINK_COUNTER_COMPARE) {
+        blink_counter = 0;
+
+        for(uint8_t gpio_number = 0; gpio_number < SWITCHABLE_GPIOS_SIZE; gpio_number++) {
+            if(is_blinking_switch(gpio_number)) {
+                if(get_blinking_gpio_state(gpio_number) == ON) {
+                    toggle_gpio_state(switchable_gpios[gpio_number]);
+                }
+                else {
+                    set_gpio_state(switchable_gpios[gpio_number], OFF);
+                }
+            } 
+        }
+    }
+}
+
+inline static void do_main_loop(void) {
+    uint8_t counter = 0;
+    direction_t last = UNDEFINED;
+
+    while(1) {
+        while(!ppm_signal_received) {
+            _delay_ms(1);
+        }
+        ppm_signal_received = FALSE;
+
+        direction_t current = get_direction(ppm_pulse_length);
+
+        /*
+         * works as follows: 
+         * - moving joystick from middle to forward selects next switchable GPIO pin
+         * - moving joystick from middle to backward toggles the selected GPIO pin and resets switch selection
+         * - moving joystick from middle to backward without previous switch selection turns all switches off
+         * - if switch selection is higher than number of switchable GPIO pins, simply nothing happens
+         */
+        if(last == NEUTRAL && current == FORWARD) {
+            if(counter <= SWITCHABLE_GPIOS_SIZE) {
+                counter++;
+            }
+        } 
+        else if(last == NEUTRAL && current == BACKWARD) {
+            if(counter > 0 && counter <= SWITCHABLE_GPIOS_SIZE) {
+                toggle_switch_state(counter - 1);
+            }
+            if(counter == 0) {
+                for(uint8_t i = 0; i < SWITCHABLE_GPIOS_SIZE; i++) {
+                    set_switch_state(i, OFF);
+                }
+            }
+            counter = 0;
+        }
+
+        if(current != UNDEFINED) {
+            last = current;
+        }
+
+        blink_blinking_gpios();
     }
 }
 
@@ -209,45 +302,7 @@ int main(void) {
 
     sei();
     
-    uint8_t counter = 0;
-    direction_t last = UNDEFINED;
-
-    while(1) {
-        while(!ppm_signal_received) {
-            _delay_ms(1);
-        }
-        ppm_signal_received = FALSE;
-
-        direction_t current = get_direction(ppm_pulse_length);
-
-        /*
-         * works as follows: 
-         * - moving joystick from middle to forward selects next switchable GPIO pin
-         * - moving joystick from middle to backward toggles the selected GPIO pin and resets switch selection
-         * - moving joystick from middle to backward without previous switch selection turns all switches off
-         * - if switch selection is higher than number of switchable GPIO pins, simply nothing happens
-         */
-        if(last == NEUTRAL && current == FORWARD) {
-            if(counter <= SWITCHABLE_GPIOS_SIZE) {
-                counter++;
-            }
-        } 
-        else if(last == NEUTRAL && current == BACKWARD) {
-            if(counter > 0 && counter <= SWITCHABLE_GPIOS_SIZE) {
-                toggle_gpio_state(switchable_gpios[counter - 1]);
-            }
-            if(counter == 0) {
-                for(uint8_t i = 0; i < SWITCHABLE_GPIOS_SIZE; i++) {
-                    set_gpio_state(switchable_gpios[i], OFF);
-                }
-            }
-            counter = 0;
-        }
-
-        if(current != UNDEFINED) {
-            last = current;
-        }
-    }
+    do_main_loop();
 }
 
 /* servo input pin on INT0 */

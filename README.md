@@ -5,9 +5,16 @@ The eight channel memory switch works with one channel of a PPM RC system.
 - Moving the joystick from middle to forward selects the next switchable GPIO pin
 - Moving the joystick from middle to backward toggles the selected GPIO pin and resets switch selection
 - Moving the joystick from middle to backward without previous switch selection turns all switches off
-- If the selected switch is higher than number of switchable GPIO pins, simply nothing happens
+- If the selected switch is higher than the number of switchable GPIO pins, simply nothing happens
 
-One GPIO pin is reserved for driving a gear motor with PWM, e.g. for a radar antenna.
+The GPIO pin 1 (GPIO_1) is reserved for driving a gear motor with PWM, e.g. for a radar antenna.
+It cannot be switched on or off.
+
+All switchable GPIO pins can be defined to be a blinking/flashing pin.
+All blinking/flashing pins share the same blinking/flashing frequency.
+The blinking/flashing frequency is defined as the number of received PPM pulses.
+Therefore, the frequency is limited by the PPM frame rate of your receiver.
+
 
 The program runs on an ATtiny24 MCU.
 
